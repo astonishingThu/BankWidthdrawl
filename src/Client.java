@@ -1,5 +1,6 @@
+import java.io.Serializable;
 import java.util.ArrayList;
-public class Client {
+public class Client implements Serializable {
 
     static ArrayList<Client> clientsList = new ArrayList<>();
     private String username;
@@ -18,40 +19,6 @@ public class Client {
         setUsername(username);
         setPasswords(passwords);
     }
-
-    public Client(String username, String passwords) {
-        setUsername(username);
-        setPasswords(passwords);
-    }
-
-    public boolean getCash(double amount) {
-        if (accountBalance >= amount) {
-            accountBalance -= amount;
-            return true;
-        }
-        return false;
-    }
-
-    public boolean cashDeposit(double amount) {
-        if (amount>500) {
-            return false;
-        } else {
-            accountBalance+=amount;
-            return true;
-        }
-    }
-
-    public boolean transferMoney(Client receiver, double amount) {
-        if (amount<=accountBalance) {
-            receiver.setAccountBalance(receiver.getAccountBalance()+amount);
-            accountBalance-=amount;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-
     public String getName() {
         return name;
     }

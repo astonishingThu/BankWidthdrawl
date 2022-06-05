@@ -213,7 +213,6 @@ class ChangeName extends Option {
             throw new RuntimeException(e);
         }
     }
-
     @Override
     public void readData() {
 
@@ -268,7 +267,6 @@ class ChangeUsername extends Option {
 
     }
 }
-
 class ChangeAccountId extends Option {
 
     @Override
@@ -289,7 +287,6 @@ class ChangeAccountId extends Option {
             throw new RuntimeException(e);
         }
     }
-
     @Override
     public void readData() {
 

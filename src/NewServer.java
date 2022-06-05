@@ -4,7 +4,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class NewServer {
-    ArrayList<Option> optionList = new ArrayList<>();
     ServerSocket serverSocket;
     Socket clientSocket;
     public static BufferedReader reader;
@@ -29,12 +28,12 @@ public class NewServer {
 
         reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         writer = new PrintWriter(clientSocket.getOutputStream(),true);
-
         while (true) {
             requestOption = reader.readLine();
             System.out.println("Option read: "+requestOption);
 
             System.out.println("Sending back signal...");
+
             optionHandler();
         }
     }

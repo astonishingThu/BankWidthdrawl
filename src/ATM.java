@@ -36,14 +36,9 @@ public class ATM implements MyTheme{
 
     public static void main(String[] args) {
         ATM a = new ATM();
-        a.signUpGUi();
+        a.loginGui();
         a.setUpNetworking();
     }
-
-    public void runGui() {
-        loginGui();
-    }
-
     private void loginGui() {
         loginFrame = new MyFrame("Revel ATM");
 
