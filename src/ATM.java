@@ -30,14 +30,18 @@ public class ATM implements MyTheme{
     private MyTextField typeField;
     private MyTextField typeAgainField;
     private MyFrame changeNameFrame;
-    private MyFrame changeAccountIdFrame;
+    private MyFrame deleteAccountFrame;
     private MyFrame changeUserNameFrame;
     private MyFrame changePasswordFrame;
 
     public static void main(String[] args) {
         ATM a = new ATM();
-        a.loginGui();
+        a.loadGui();
         a.setUpNetworking();
+    }
+
+    private void loadGui() {
+        loginGui();
     }
     private void loginGui() {
         loginFrame = new MyFrame("Revel ATM");
@@ -318,8 +322,8 @@ public class ATM implements MyTheme{
         changeUsernameButton.addActionListener(new ChangeUsernameListener());
         MyButton changePasswordButton = new MyButton("Change your password");
         changePasswordButton.addActionListener(new ChangePasswordListener());
-        MyButton changeAccountIdButton = new MyButton("Change your Account ID");
-        changeAccountIdButton.addActionListener(new ChangeAccountIdListener());
+        MyButton changeAccountIdButton = new MyButton("Delete your account");
+        changeAccountIdButton.addActionListener(new DeleteAccountListener());
 
         MyPanel grid = new MyPanel(new GridLayout(4,2,20,20));
         grid.add(nameLabel);
@@ -380,38 +384,38 @@ public class ATM implements MyTheme{
         changeNameFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     }
 
-    public void changeAccountIdPopUp() {
-        changeAccountIdFrame = new MyFrame("Change Account ID");
+    public void deleteAccountPopUp() {
+        deleteAccountFrame = new MyFrame("Delete your account");
 
         MyTitle title = new MyTitle();
 
-        MyPanel changeAccountIdPanel = new MyPanel(new BorderLayout(),"main");
+        MyPanel deleteAccountPanel = new MyPanel(new BorderLayout(),"main");
 
-        MyLabel typeLabel = new MyLabel("Type your new Account ID");
-        MyLabel typeAgainLabel = new MyLabel("Type your new Account ID again");
+        MyLabel typeLabel = new MyLabel("Type your password");
+        MyLabel typeAgainLabel = new MyLabel("Type your password again");
 
-        typeField = new MyTextField(20);
-        typeAgainField = new MyTextField(20);
+        passField = new MyPasswordField(20);
+        confirmPassFiled = new MyPasswordField(20);
 
         MyPanel centerPanel = new MyPanel(new GridLayout(2,2,20,20));
         centerPanel.add(typeLabel);
-        centerPanel.add(typeField);
+        centerPanel.add(passField);
         centerPanel.add(typeAgainLabel);
-        centerPanel.add(typeAgainField);
+        centerPanel.add(confirmPassFiled);
 
         MyButton confirmButton = new MyButton("Confirm >>>");
         SouthPanel southPanel = new SouthPanel();
         southPanel.add(confirmButton);
         confirmButton.addActionListener(new ChangeAccountIdToWindowPopUpListener());
 
-        changeAccountIdPanel.add(BorderLayout.NORTH,title);
-        changeAccountIdPanel.add(BorderLayout.CENTER,centerPanel);
-        changeAccountIdPanel.add(BorderLayout.SOUTH,southPanel);
+        deleteAccountPanel.add(BorderLayout.NORTH,title);
+        deleteAccountPanel.add(BorderLayout.CENTER,centerPanel);
+        deleteAccountPanel.add(BorderLayout.SOUTH,southPanel);
 
-        changeAccountIdFrame.add(BorderLayout.CENTER,changeAccountIdPanel);
-        changeAccountIdFrame.setVisible(true);
-        changeAccountIdFrame.pack();
-        changeAccountIdFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        deleteAccountFrame.add(BorderLayout.CENTER,deleteAccountPanel);
+        deleteAccountFrame.setVisible(true);
+        deleteAccountFrame.pack();
+        deleteAccountFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     }
 
     public void changeUsernamePopUp() {
@@ -458,14 +462,14 @@ public class ATM implements MyTheme{
         MyLabel typeLabel = new MyLabel("Type your new password");
         MyLabel typeAgainLabel = new MyLabel("Type your new password again");
 
-        typeField = new MyTextField(20);
-        typeAgainField = new MyTextField(20);
+        passField = new MyPasswordField(20);
+        confirmPassFiled = new MyPasswordField(20);
 
         MyPanel centerPanel = new MyPanel(new GridLayout(2,2,20,20));
         centerPanel.add(typeLabel);
-        centerPanel.add(typeField);
+        centerPanel.add(passField);
         centerPanel.add(typeAgainLabel);
-        centerPanel.add(typeAgainField);
+        centerPanel.add(confirmPassFiled);
 
         MyButton confirmButton = new MyButton("Confirm >>>");
         SouthPanel southPanel = new SouthPanel();
@@ -480,22 +484,6 @@ public class ATM implements MyTheme{
         changePasswordFrame.setVisible(true);
         changePasswordFrame.pack();
         changePasswordFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-    }
-
-    public void windowPopUp(String message, String title) {
-
-        MyFrame windowFrame = new MyFrame(title);
-
-        MyPanel windowPanel = new MyPanel(new BorderLayout(),"main");
-
-        MyLabel windowMessage = new MyLabel(message);
-        
-        windowPanel.add(BorderLayout.CENTER,windowMessage);
-
-        windowFrame.getContentPane().add(BorderLayout.CENTER,windowPanel);
-        windowFrame.setVisible(true);
-        windowFrame.pack();
-        windowFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     }
 
     public void setUpNetworking() {
@@ -537,14 +525,14 @@ public class ATM implements MyTheme{
             if (checkRequest()) {
                 try {
                     getClientData();
-                    currClient.showInfo();
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
                 loginFrame.dispose();
                 menuGui();
             } else {
-                windowPopUp("Invalid Username or Password","Error!!!");
+                PopupDialog popupDialog = new PopupDialog();
+                popupDialog.showMessage(loginFrame,"Invalid Username or Password","Error","Error");
             }
         }
     }
@@ -561,8 +549,6 @@ public class ATM implements MyTheme{
         @Override
         public void actionPerformed(ActionEvent e) {
             System.out.println("Sign Up has been clicked");
-//            passField.setText("");
-//            confirmPassFiled.setText("");
             loginFrame.dispose();
             signUpGUi();
         }
@@ -586,12 +572,13 @@ public class ATM implements MyTheme{
             writer.println(passField.getPassword());
             writer.println(confirmPassFiled.getPassword());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
+                popupDialog.showMessage(signUpFrame,"Signup successfully! Close this window and login","Info","Info");
                 signUpFrame.dispose();
-                windowPopUp("Signup successfully! Close this window and login","Info");
                 loginGui();
             } else {
-                windowPopUp("Invalid username or password! Please try again","Error!!!");
+                popupDialog.showMessage(signUpFrame,"Invalid username or password! Please try again","Error","Error");
             }
         }
     }
@@ -636,9 +623,11 @@ public class ATM implements MyTheme{
             sendRequest("GetCash");
             writer.println(getCashAmount.getText());
             getServerSignal();
+            PopupDialog popup = new PopupDialog();
             if (checkRequest()) {
+                popup.showMessage(depositFrame,"Succeeded","Info","Info");
+//                JOptionPane.showMessageDialog(depositFrame,"Succeeded","Info",JOptionPane.INFORMATION_MESSAGE);
                 getCashFrame.dispose();
-                windowPopUp("Succeeded","Info");
                 try {
                     getClientData();
                 } catch (IOException ex) {
@@ -646,7 +635,8 @@ public class ATM implements MyTheme{
                 }
                 System.out.println(currClient.getAccountBalance());
                 menuGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+            } else
+                popup.showMessage(depositFrame,"There something wrong! Please try again","Error","Error");
         }
     }
 
@@ -656,9 +646,12 @@ public class ATM implements MyTheme{
             sendRequest("Deposit");
             writer.println(depositAmount.getText());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
+//                JOptionPane.showMessageDialog(depositFrame,"Succeeded","Info",JOptionPane.INFORMATION_MESSAGE);
+                popupDialog.showMessage(depositFrame,"Succeeded","Info","Info");
                 depositFrame.dispose();
-                windowPopUp("Succeeded","Info");
+                //windowPopUp("Succeeded","Info");
                 try {
                     getClientData();
                 } catch (IOException ex) {
@@ -666,7 +659,7 @@ public class ATM implements MyTheme{
                 }
                 System.out.println(currClient.getAccountBalance());
                 menuGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+            } else popupDialog.showMessage(depositFrame,"There something wrong! Please try again","Error","Error");
         }
     }
 
@@ -685,9 +678,10 @@ public class ATM implements MyTheme{
             writer.println(transferAmount.getText());
             writer.println(destination.getText());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
+                popupDialog.showMessage(transferFrame,"Succeeded","Info","Info");
                 transferFrame.dispose();
-                windowPopUp("Succeeded","Info");
                 try {
                     getClientData();
                 } catch (IOException ex) {
@@ -695,7 +689,7 @@ public class ATM implements MyTheme{
                 }
                 System.out.println(currClient.getAccountBalance());
                 menuGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+            } else popupDialog.showMessage(transferFrame,"There something wrong! Please try again","Error","Error");
         }
     }
 
@@ -738,10 +732,10 @@ public class ATM implements MyTheme{
         }
     }
 
-    public class ChangeAccountIdListener implements ActionListener {
+    public class DeleteAccountListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            changeAccountIdPopUp();
+            deleteAccountPopUp();
         }
     }
 
@@ -767,17 +761,18 @@ public class ATM implements MyTheme{
             writer.println(typeField.getText());
             writer.println(typeAgainField.getText());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
+                popupDialog.showMessage(changeNameFrame,"Succeeded","Info","Info");
                 changeNameFrame.dispose();
                 accountSettingFrame.dispose();
-                windowPopUp("Succeeded","Info");
                 try {
                     getClientData();
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
                 accountSettingGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+            } else popupDialog.showMessage(changeNameFrame,"There something wrong! Please try again","Error","Error");
         }
     }
 
@@ -788,17 +783,18 @@ public class ATM implements MyTheme{
             writer.println(typeField.getText());
             writer.println(typeAgainField.getText());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
+                popupDialog.showMessage(changeUserNameFrame,"Succeeded","Info","Info");
                 changeUserNameFrame.dispose();
                 accountSettingFrame.dispose();
-                windowPopUp("Succeeded","Info");
                 try {
                     getClientData();
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
                 accountSettingGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+            } else popupDialog.showMessage(changeUserNameFrame,"There something wrong! Please try again","Error","Error");
         }
     }
 
@@ -806,40 +802,37 @@ public class ATM implements MyTheme{
         @Override
         public void actionPerformed(ActionEvent e) {
             sendRequest("ChangePassword");
-            writer.println(typeField.getText());
-            writer.println(typeAgainField.getText());
+            writer.println(passField.getPassword());
+            writer.println(confirmPassFiled.getPassword());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
+                popupDialog.showMessage(changePasswordFrame,"Succeeded","Info","Info");
                 changePasswordFrame.dispose();
                 accountSettingFrame.dispose();
-                windowPopUp("Succeeded","Info");
                 try {
                     getClientData();
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
                 accountSettingGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+            } else popupDialog.showMessage(changePasswordFrame,"There something wrong! Please try again","Error","Error");
         }
     }
 
     public class ChangeAccountIdToWindowPopUpListener implements ActionListener{
         public void actionPerformed(ActionEvent e) {
-            sendRequest("ChangeAccountId");
-            writer.println(typeField.getText());
-            writer.println(typeAgainField.getText());
+            sendRequest("DeleteAccount");
+            writer.println(passField.getPassword());
+            writer.println(confirmPassFiled.getPassword());
             getServerSignal();
+            PopupDialog popupDialog = new PopupDialog();
             if (checkRequest()) {
-                changeAccountIdFrame.dispose();
+                popupDialog.showMessage(deleteAccountFrame,"Succeeded","Info","Info");
+                deleteAccountFrame.dispose();
                 accountSettingFrame.dispose();
-                windowPopUp("Succeeded","Info");
-                try {
-                    getClientData();
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
-                accountSettingGui();
-            } else windowPopUp("There something wrong! Please try again","Error");
+                loginGui();
+            } else popupDialog.showMessage(deleteAccountFrame,"There's something wrong! Please try again","Error","Error");
         }
     }
 
