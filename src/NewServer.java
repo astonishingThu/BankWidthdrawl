@@ -1,26 +1,26 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 public class NewServer {
+    static Connection connection;
     ServerSocket serverSocket;
     Socket clientSocket;
     public static BufferedReader reader;
     public static PrintWriter writer;
     public static String requestOption;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, SQLException, ClassNotFoundException {
         NewServer server = new NewServer();
-        Client client1 =  new Client("Thu","2014","redvelvet","140801");
-        Client client2 = new Client("Cau","2003","cau123","anhthu2003");
-        client1.setAccountBalance(100);
-        Client.clientsList.add(client1);
-        Client.clientsList.add(client2);
         server.clientHandler();
     }
 
-    public void clientHandler() throws IOException {
+    public void clientHandler() throws IOException, SQLException, ClassNotFoundException {
         Option.addOptionList();
 
         serverSocket = new ServerSocket(2014);
@@ -33,16 +33,21 @@ public class NewServer {
             System.out.println("Option read: "+requestOption);
 
             System.out.println("Sending back signal...");
-
+            dbInitialize();
             optionHandler();
         }
     }
-    public void optionHandler(){
+    public void optionHandler() throws SQLException {
         for (Option opt:Option.optionList) {
             if (opt.checkOption(requestOption)) {
                 System.out.println(opt.getClass());
                 opt.go();
+                return;
             }
         }
+    }
+    public void dbInitialize() throws ClassNotFoundException, SQLException {
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/bank_withdrawl","root","140801");
     }
 }

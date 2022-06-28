@@ -1,10 +1,11 @@
 import java.io.IOException;
+import java.sql.*;
 import java.util.ArrayList;
 
 public abstract class Option {
     public static ArrayList<Option> optionList = new ArrayList<>();
     public static Client currClient;
-    public abstract void go(); // run Option
+    public abstract void go() throws SQLException; // run Option
     public abstract void readData();
 
     public boolean checkOption(String option) {
@@ -19,7 +20,7 @@ public abstract class Option {
         optionList.add(new Transfer());
         optionList.add(new ChangeUsername());
         optionList.add(new ChangePassword());
-        optionList.add(new ChangeAccountId());
+        optionList.add(new DeleteAccount());
     }
     public boolean responseRequest(boolean condition) {
         if (condition) {
@@ -31,24 +32,40 @@ public abstract class Option {
         }
     }
     public void sendClientData() {
-        NewServer.writer.println(Option.currClient.getName());
-        NewServer.writer.println(Option.currClient.getAccountNumber());
-        NewServer.writer.println(Option.currClient.getUsername());
-        NewServer.writer.println(Option.currClient.getPasswords());
-        NewServer.writer.println(Option.currClient.getAccountBalance());
+        NewServer.writer.println(currClient.getName());
+        NewServer.writer.println(currClient.getAccountNumber());
+        NewServer.writer.println(currClient.getUsername());
+        NewServer.writer.println(currClient.getPasswords());
+        NewServer.writer.println(currClient.getAccountBalance());
     }
 }
 
 class Login extends Option {
     private String username;
     private String password;
+    Queries q;
     @Override
-    public void go(){
+    public void go() throws SQLException {
         readData();
         System.out.println("This is login");
-        if(responseRequest(validateLogin())) {
+        q = new Queries();
+        if(responseRequest(q.validateLogin(username,password))) {
+            setCurrClient();
             sendClientData();
         }
+    }
+
+    public void setCurrClient() throws SQLException {
+        ResultSet resultSet = q.sendClientData(username);
+        resultSet.next();
+        System.out.println(resultSet.getString("name"));
+        currClient = new Client(resultSet.getString("name"),
+                resultSet.getString("account_number"),
+                resultSet.getString("username"),
+                resultSet.getString("password"),resultSet.getDouble("account_balance"));
+
+        System.out.println("Inside setCurrClient: ");
+        currClient.showInfo();
     }
 
     @Override
@@ -60,29 +77,20 @@ class Login extends Option {
             throw new RuntimeException(e);
         }
     }
-
-    public boolean validateLogin() {
-        for (Client client:Client.clientsList) {
-            if (client.getUsername().equals(username) && client.getPasswords().equals(password)) {
-                currClient = client;
-                return true;
-            }
-        }
-        return false;
-    }
-
-
 }
 
 class Signup extends Option {
     private String confirmPassword;
+    Queries q;
     Client tempClient;
     @Override
     public void go() {
         readData();
-        responseRequest(addUser());
-        sendClientData();
-        Client.showClientsList();
+        try {
+            responseRequest(addUser());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -99,39 +107,34 @@ class Signup extends Option {
         }
     }
 
-    public boolean validateSignup() {
-        for (Client client:Client.clientsList) {
-            if (client.getUsername().equals(tempClient.getUsername()) || tempClient.getUsername().equals("") ||
-            tempClient.getPasswords().equals("") || !tempClient.getPasswords().equals(confirmPassword) ||
-                    client.getAccountNumber().equals(tempClient.getAccountNumber()) || tempClient.getName().equals("") || tempClient.getAccountNumber().equals(""))
-                return false;
-        }
-        return true;
-    }
-
-    public boolean addUser() {
-        if (validateSignup()) {
-            Client.clientsList.add(tempClient);
+    public boolean addUser() throws SQLException {
+        q = new Queries();
+        if (q.validateSignup(tempClient.getUsername(),tempClient.getPasswords(),confirmPassword,tempClient.getAccountNumber())) {
+            Queries q = new Queries(tempClient);
+            q.addClient().executeUpdate();
             return true;
         } else return false;
     }
-
 }
 
 class GetCash extends Option {
     @Override
     public void go() {
         try {
+            System.out.println("Inside getCash:");
+            currClient.showInfo();
             double amount = Double.parseDouble(NewServer.reader.readLine());
             if (amount<=currClient.getAccountBalance()) {
                 currClient.setAccountBalance(currClient.getAccountBalance()-amount);
+                Queries q = new Queries();
+                q.getCash(currClient.getAccountNumber(),amount);
                 NewServer.writer.println("true");
                 sendClientData();
             } else {
                 NewServer.writer.println("false");
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (SQLException | IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -147,10 +150,14 @@ class Deposit extends Option {
         try {
             double amount = Double.parseDouble(NewServer.reader.readLine());
             currClient.setAccountBalance(currClient.getAccountBalance()+amount);
+            Queries q = new Queries();
+            q.deposit(currClient.getAccountNumber(),amount);
             NewServer.writer.println("true");
             sendClientData();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
     @Override
@@ -165,28 +172,20 @@ class Transfer extends Option {
         try {
             double amount = Double.parseDouble(NewServer.reader.readLine());
             String destination = NewServer.reader.readLine();
-            if (validateInput(amount,destination)) {
+            Queries q = new Queries();
+            if (q.validateTransfer(currClient.getAccountNumber(), destination, amount, currClient.getAccountBalance())) {
                 currClient.setAccountBalance(currClient.getAccountBalance()-amount);
-                for (Client client:Client.clientsList) {
-                    if (client.getAccountNumber().equals(destination)) {
-                        client.setAccountBalance(client.getAccountBalance()+amount);
-                        NewServer.writer.println("true");
-                        sendClientData();
-                        return;
-                    }
-                }
+                q.transfer(destination, currClient.getAccountNumber(), amount);
+                NewServer.writer.println("true");
+                sendClientData();
+                return;
             }
             NewServer.writer.println("false");
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-    }
-
-    private boolean validateInput(double amount,String destination) {
-        for (Client client:Client.clientsList) {
-            if (client.getAccountNumber().equals(destination) && amount<currClient.getAccountBalance()) return true;
-        }
-       return false;
     }
 
     @Override
@@ -203,6 +202,8 @@ class ChangeName extends Option {
             String name = NewServer.reader.readLine();
             String confirmName = NewServer.reader.readLine();
             if (name.equals(confirmName) && !name.equals("")) {
+                Queries q = new Queries();
+                q.changeName(currClient.getAccountNumber(),name);
                 currClient.setName(name);
                 NewServer.writer.println("true");
                 sendClientData();
@@ -211,6 +212,8 @@ class ChangeName extends Option {
             NewServer.writer.println("false");
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
     @Override
@@ -226,6 +229,8 @@ class ChangePassword extends Option {
             String password = NewServer.reader.readLine();
             String confirmPassword = NewServer.reader.readLine();
             if (password.equals(confirmPassword) && !password.equals("")) {
+                Queries q = new Queries();
+                q.changePassword(currClient.getAccountNumber(),password);
                 currClient.setPasswords(password);
                 NewServer.writer.println("true");
                 sendClientData();
@@ -234,6 +239,8 @@ class ChangePassword extends Option {
             NewServer.writer.println("false");
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -251,6 +258,8 @@ class ChangeUsername extends Option {
             String username = NewServer.reader.readLine();
             String confirmUsername = NewServer.reader.readLine();
             if (username.equals(confirmUsername) && !username.equals("")) {
+                Queries q = new Queries();
+                q.changeUsername(currClient.getAccountNumber(),username);
                 currClient.setUsername(username);
                 NewServer.writer.println("true");
                 sendClientData();
@@ -259,6 +268,8 @@ class ChangeUsername extends Option {
             NewServer.writer.println("false");
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -267,24 +278,24 @@ class ChangeUsername extends Option {
 
     }
 }
-class ChangeAccountId extends Option {
+class DeleteAccount extends Option {
 
     @Override
     public void go() {
         try {
-            String accountId = NewServer.reader.readLine();
-            String confirmAccountId = NewServer.reader.readLine();
-            for (Client client:Client.clientsList) {
-                if (!client.getAccountNumber().equals(accountId) && accountId.equals(confirmAccountId) && !accountId.equals("")) {
-                    currClient.setAccountNumber(accountId);
-                    NewServer.writer.println("true");
-                    sendClientData();
-                    return;
-                }
+            String password = NewServer.reader.readLine();
+            String confirmPassword = NewServer.reader.readLine();
+            Queries q = new Queries();
+            if (password.equals(confirmPassword) && !password.equals("")) {
+                q.deleteAccount(currClient.getAccountNumber());
+                NewServer.writer.println("true");
+                return;
             }
             NewServer.writer.println("false");
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
     @Override

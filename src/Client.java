@@ -1,23 +1,25 @@
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
+
 public class Client implements Serializable {
 
-    static ArrayList<Client> clientsList = new ArrayList<>();
     private String username;
     private String name;
     private String passwords;
     private double accountBalance;
     private String accountNumber;
-
+    static List<Client> clientsList = new ArrayList<>();
     public Client(){
 
     }
 
-    public Client(String name, String accountNumber, String username, String passwords) {
+    public Client(String name, String accountNumber, String username, String passwords,double accountBalance) {
         setAccountNumber(accountNumber);
         setName(name);
         setUsername(username);
         setPasswords(passwords);
+        setAccountBalance(accountBalance);
     }
     public String getName() {
         return name;
@@ -64,11 +66,6 @@ public class Client implements Serializable {
         System.out.println("Account ID: "+ getAccountNumber());
         System.out.println("Username: "+ getUsername());
         System.out.println("Password: "+ getPasswords());
-    }
-
-    public static void showClientsList() {
-        for (Client client:Client.clientsList) {
-            client.showInfo();
-        }
+        System.out.println("Account Balance: "+getAccountBalance());
     }
 }
